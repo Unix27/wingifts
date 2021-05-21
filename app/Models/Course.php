@@ -57,7 +57,7 @@ class Course extends Model
     public function files(){
 	    return $this->hasMany(File::class);
     }
-    public function sluggable()
+    public function sluggable(): array
     {
         return [
             'slug' => [

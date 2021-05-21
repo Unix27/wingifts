@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\CloudPaymentsSubscription;
+use Carbon\Carbon;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
@@ -50,5 +52,54 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         return redirect(RouteServiceProvider::HOME);
+    }
+
+    public function import(){
+        $file = asset('storage/token.csv');
+        $file_handle = fopen($file, 'r');
+        $filterRows = [];
+        while (!feof($file_handle)) {
+            $line_of_text[] = fgetcsv($file_handle, 0, ';');
+            // return $line_of_text[0][;
+        }
+        fclose($file_handle);
+        foreach($line_of_text as $row){
+            $filterRows[$row[1]][] = $row;
+        }
+
+        foreach($filterRows as $key => $row){
+            if($key == 'AccountId'){
+                continue;
+            } else{
+                $user = User::where('email', '=', $row[0][1])->first();
+                if($user){
+                // return $user;
+                    continue;
+                } else{
+                    $new_user = new User();
+                    $new_user->email = $row[0][1];
+                    $new_user->name = $row[0][1];
+                    $new_user->card_token = $row[0][0];
+                    $new_user->is_new = true;
+                    // $new_user->use_subscription = true;
+                    $new_user->password = bcrypt($row[0][1]);
+                    $new_user->save();
+
+                    $subscription = new CloudPaymentsSubscription();
+                    $subscription->user_id = $new_user->id;
+                    $subscription->currency = 'RUB';
+                    $subscription->status = 'Failed';
+                    $subscription->start_at = Carbon::now()->addDays(3);
+                    $subscription->cloudpayments_id = $row[0][0];
+                    $subscription->amount = 625;
+                    $subscription->save();
+                }
+            }
+        }
+
+
+        return $filterRows;
+
+        
     }
 }

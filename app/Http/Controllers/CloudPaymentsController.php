@@ -352,7 +352,6 @@ class CloudPaymentsController extends Controller
             if (isset($result['Model']['Status']) && $result['Model']['Status'] == 'Completed') {
                 $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(30);
                 $payment->status = 'Active';
-                // $payment->is_new = false;
                 $payment->save();
 
                  $user = User::where('email',$payment->accountId)->first();
@@ -460,7 +459,6 @@ class CloudPaymentsController extends Controller
             if (isset($result['Model']['Status']) && $result['Model']['Status'] == 'Completed') {
                 $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(30);
                 $payment->status = 'Active';
-                // $payment->is_new = false;
                 $payment->save();
 
                  $user = User::where('email',$payment->accountId)->first();
@@ -568,7 +566,6 @@ class CloudPaymentsController extends Controller
             if (isset($result['Model']['Status']) && $result['Model']['Status'] == 'Completed') {
                 $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(30);
                 $payment->status = 'Active';
-                // $payment->is_new = false;
                 $payment->save();
 
                  $user = User::where('email',$payment->accountId)->first();
@@ -676,7 +673,6 @@ class CloudPaymentsController extends Controller
             if (isset($result['Model']['Status']) && $result['Model']['Status'] == 'Completed') {
                 $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(30);
                 $payment->status = 'Active';
-                // $payment->is_new = false;
                 $payment->save();
 
                  $user = User::where('email',$payment->accountId)->first();

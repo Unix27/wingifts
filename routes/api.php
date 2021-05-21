@@ -19,6 +19,11 @@ use App\Models\CloudPaymentsSubscription;
 
 Route::post('/cloudPayments/charge', 'App\Http\Controllers\CloudPaymentsController@charge');
 Route::post('/cloudPayments/chargeTokens', 'App\Http\Controllers\CloudPaymentsController@chargeToken');
+
+Route::post('/cloudPayments/chargeTokensFailed', 'App\Http\Controllers\CloudPaymentsController@chargeTokenFailed');
+Route::post('/cloudPayments/chargeTokensActive', 'App\Http\Controllers\CloudPaymentsController@chargeTokenActive');
+Route::post('/cloudPayments/chargeTokensSubscribed', 'App\Http\Controllers\CloudPaymentsController@chargeTokenSubscribed');
+
 // Route::get('/cloudPayments/chargeToken', 'App\Http\Controllers\CloudPaymentsController@chargeToken');
 
 // Route::get('/cloudPayments/chargeToken', function(){

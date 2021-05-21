@@ -28,7 +28,8 @@ class User extends Authenticatable
         'password',
         'lastname',
         'phone',
-        'card_token'
+        'card_token',
+        'is_new'
     ];
 
     /**

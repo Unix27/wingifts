@@ -67,7 +67,7 @@ Route::get('/land/{slug}', 'App\Http\Controllers\LandController@show')->middlewa
 
 
 Route::get('/account', 'App\Http\Controllers\AccountController@settings')->middleware('logged.check')->name('account');
-Route::get('/account/subscription', 'App\Http\Controllers\AccountController@settingsSubscription')->middleware('logged.check')->name('account.settings.subscription');
+Route::get('/account/subscription', 'App\Http\Controllers\AccountController@settingsSubscription')->name('account.settings.subscription');
 Route::get('/account/course-list', 'App\Http\Controllers\AccountController@courseList')->middleware('logged.check')->name('account.course.list');
 Route::get('/account/draw-list', 'App\Http\Controllers\AccountController@drawList')->middleware('logged.check')->name('account.draw.list');
 

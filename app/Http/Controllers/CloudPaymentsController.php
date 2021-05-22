@@ -65,11 +65,14 @@ class CloudPaymentsController extends Controller
                 'amount' => (float)config('cloud-payments.subscription_amount_rub'),
                 'currency' => config('cloud-payments.subscription_currency_rub'),
                 'accountId' => $request->AccountId,
-                'status' => 'Subscribed',
+                'status' => 'Active',
                 'description' => 'Free 3 days',
                 'start_at' => \Carbon\Carbon::now(),
-                'nextTransactionDate' => \Carbon\Carbon::now()->addSeconds(config('cloud-payments.start_date_add_seconds')),
-                // 'is_new' => true
+                'nextTransactionDate' => \Carbon\Carbon::now()->addSeconds(config('cloud-payments.start_date_add_seconds'))
+            ]);
+            $user->history()->create([
+                'user_id' => $user->id,
+                'action' => 'subscribed'
             ]);
 
         }
@@ -247,6 +250,10 @@ class CloudPaymentsController extends Controller
                 'status' => 'Active'
             ]);
             $user->assignRole('subscriber');
+            $user->history()->create([
+                'user_id' => $user->id,
+                'action' => 'renewed'
+            ]);
             return;
         }
 
@@ -279,11 +286,25 @@ class CloudPaymentsController extends Controller
                 $subs->status = 'Active';
                 $subs->update();
 
+                $cur_user = \App\Models\User::find($subs->user_id);
+
+                $cur_user->history()->create([
+                    'user_id' => $cur_user->id,
+                    'action' => 'renewed'
+                ]);
+
                 return true;
             } else {
                 $subs->nextTransactionDate = \Carbon\Carbon::now()->addSeconds(((int)config('cloud-payments.subscription_retry_days')) * 60 * 60 * 24);
                 $subs->status = 'Failed';
                 $subs->update();
+
+                $cur_user = \App\Models\User::find($subs->user_id);
+
+                $cur_user->history()->create([
+                    'user_id' => $cur_user->id,
+                    'action' => 'unrenewed'
+                ]);
 
                 return false;
             }
@@ -304,10 +325,10 @@ class CloudPaymentsController extends Controller
             dd($payToken);
     }
 
-    public function chargeToken(Request $request){
+ public function chargeToken(Request $request){
         $payment = CloudPaymentsSubscription::getExpiredSubsriptions();
         // $payment = CloudPaymentsSubscription::select('accountId')->get();
-        dd($payment);
+        return 1;
 
         if($payment) {
             $data = [
@@ -354,7 +375,12 @@ class CloudPaymentsController extends Controller
                 $payment->status = 'Active';
                 $payment->save();
 
-                 $user = User::where('email',$payment->accountId)->first();
+                $user = User::where('email',$payment->accountId)->first();
+
+                $user->history()->create([
+                    'user_id' => $user->id,
+                    'action' => 'unrenewed'
+                ]);
                 // $user = User::find(4945);
                 $traffic = Traffic::where('us_id',$user->id)->first();
                 if($traffic) {
@@ -387,326 +413,12 @@ class CloudPaymentsController extends Controller
                 $payment->status = 'Failed';
                 $payment->save();
 
-                Log::info('cloudPayments failed payment: ' . print_r($payment, true));
-
-            }
-
-
-       
- 
-            $dataRes = [
-                'result' => $result,
-                'payment' => $payment,
-                'data' => $data
-            ];
-            Log::info('cloudPayments fail payment: ' . print_r($dataRes, true));
-
-
-           
-
-            return response()->json([
-                'result' => $result,
-                'nextDate' => $payment->nextTransactionDate,
-            ]);
-        }
-    }
-
-    public function chargeTokenFailed(Request $request){
-        $payment = CloudPaymentsSubscription::getExpiredSubsriptionsFailed();
-        // $payment = CloudPaymentsSubscription::select('accountId')->get();
-        return 'Failed';
-
-        if($payment) {
-            $data = [
-                'token' => $payment->cloudpayments_id,
-                'email' => $payment->accountId,
-                'accountid' => $payment->accountId,
-                'Description' => 'Оформление подписки на сайте https://wingifts.net',
-                'amount' => (float)config('cloud-payments.subscription_amount_rub'),
-                // 'amount' => 1,
-                'currency' => 'RUB',
-            ];
-
-
-
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-              CURLOPT_URL => 'https://api.cloudpayments.ru/payments/tokens/charge',
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_ENCODING => '',
-              CURLOPT_MAXREDIRS => 10,
-              CURLOPT_TIMEOUT => 0,
-              CURLOPT_FOLLOWLOCATION => true,
-              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-              CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => json_encode($data),
-              CURLOPT_HTTPHEADER => array(
-                'Authorization: Basic cGtfMzFkZDAxM2JkNDRhM2ZkZWM4ODM0MzJkOTNiMTI6NTJhNzlkMWI5YTVlZTNlMTVkNjFhNTE5ZDE0OWFhNzY=',
-                'Content-Type: application/json'
-              ),
-            ));
-
-         
-
-            $result = curl_exec($curl);
-            curl_close($curl);
-
-
-            $result = json_decode($result,true);
-         
-
-            if (isset($result['Model']['Status']) && $result['Model']['Status'] == 'Completed') {
-                $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(30);
-                $payment->status = 'Active';
-                $payment->save();
-
-                 $user = User::where('email',$payment->accountId)->first();
-                // $user = User::find(4945);
-                $traffic = Traffic::where('us_id',$user->id)->first();
-                if($traffic) {
-                    // $curl = curl_init();
-
-                    // curl_setopt_array($curl, array(
-                    //     CURLOPT_URL => 'https://your-free-prize.xyz/callback.php?clickid=' . $traffic->clickid . '&action=rebil',
-                    //     CURLOPT_RETURNTRANSFER => true,
-                    //     CURLOPT_ENCODING => '',
-                    //     CURLOPT_MAXREDIRS => 10,
-                    //     CURLOPT_TIMEOUT => 0,
-                    //     CURLOPT_FOLLOWLOCATION => true,
-                    //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    //     CURLOPT_CUSTOMREQUEST => 'GET',
-                    // ));
-
-                    // $response = curl_exec($curl);
-
-                    //  Log::info('traffic rebil: ' . print_r([$traffic,$response], true));
-                    // curl_close($curl);
-                     // return 1;
-
-                }
-
-            Log::info('cloudPayments success payment: ' . print_r($payment, true));
-
-                
-            } else {
-                $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(6);
-                $payment->status = 'Failed';
-                $payment->save();
-
-                Log::info('cloudPayments failed payment: ' . print_r($payment, true));
-
-            }
-
-
-       
- 
-            $dataRes = [
-                'result' => $result,
-                'payment' => $payment,
-                'data' => $data
-            ];
-            Log::info('cloudPayments fail payment: ' . print_r($dataRes, true));
-
-
-           
-
-            return response()->json([
-                'result' => $result,
-                'nextDate' => $payment->nextTransactionDate,
-            ]);
-        }
-    }
-
-    public function chargeTokenActive(Request $request){
-        $payment = CloudPaymentsSubscription::getExpiredSubsriptionsActive();
-        // $payment = CloudPaymentsSubscription::select('accountId')->get();
-        return 'Active';
-
-        if($payment) {
-            $data = [
-                'token' => $payment->cloudpayments_id,
-                'email' => $payment->accountId,
-                'accountid' => $payment->accountId,
-                'Description' => 'Оформление подписки на сайте https://wingifts.net',
-                'amount' => (float)config('cloud-payments.subscription_amount_rub'),
-                // 'amount' => 1,
-                'currency' => 'RUB',
-            ];
-
-
-
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-              CURLOPT_URL => 'https://api.cloudpayments.ru/payments/tokens/charge',
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_ENCODING => '',
-              CURLOPT_MAXREDIRS => 10,
-              CURLOPT_TIMEOUT => 0,
-              CURLOPT_FOLLOWLOCATION => true,
-              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-              CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => json_encode($data),
-              CURLOPT_HTTPHEADER => array(
-                'Authorization: Basic cGtfMzFkZDAxM2JkNDRhM2ZkZWM4ODM0MzJkOTNiMTI6NTJhNzlkMWI5YTVlZTNlMTVkNjFhNTE5ZDE0OWFhNzY=',
-                'Content-Type: application/json'
-              ),
-            ));
-
-         
-
-            $result = curl_exec($curl);
-            curl_close($curl);
-
-
-            $result = json_decode($result,true);
-         
-
-            if (isset($result['Model']['Status']) && $result['Model']['Status'] == 'Completed') {
-                $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(30);
-                $payment->status = 'Active';
-                $payment->save();
-
-                 $user = User::where('email',$payment->accountId)->first();
-                // $user = User::find(4945);
-                $traffic = Traffic::where('us_id',$user->id)->first();
-                if($traffic) {
-                    // $curl = curl_init();
-
-                    // curl_setopt_array($curl, array(
-                    //     CURLOPT_URL => 'https://your-free-prize.xyz/callback.php?clickid=' . $traffic->clickid . '&action=rebil',
-                    //     CURLOPT_RETURNTRANSFER => true,
-                    //     CURLOPT_ENCODING => '',
-                    //     CURLOPT_MAXREDIRS => 10,
-                    //     CURLOPT_TIMEOUT => 0,
-                    //     CURLOPT_FOLLOWLOCATION => true,
-                    //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    //     CURLOPT_CUSTOMREQUEST => 'GET',
-                    // ));
-
-                    // $response = curl_exec($curl);
-
-                    //  Log::info('traffic rebil: ' . print_r([$traffic,$response], true));
-                    // curl_close($curl);
-                     // return 1;
-
-                }
-
-            Log::info('cloudPayments success payment: ' . print_r($payment, true));
-
-                
-            } else {
-                $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(6);
-                $payment->status = 'Failed';
-                $payment->save();
-
-                Log::info('cloudPayments failed payment: ' . print_r($payment, true));
-
-            }
-
-
-       
- 
-            $dataRes = [
-                'result' => $result,
-                'payment' => $payment,
-                'data' => $data
-            ];
-            Log::info('cloudPayments fail payment: ' . print_r($dataRes, true));
-
-
-           
-
-            return response()->json([
-                'result' => $result,
-                'nextDate' => $payment->nextTransactionDate,
-            ]);
-        }
-    }
-
-    public function chargeTokenSubscribed(Request $request){
-        $payment = CloudPaymentsSubscription::getExpiredSubsriptionsSubscribed();
-        // $payment = CloudPaymentsSubscription::select('accountId')->get();
-        return 'Subscribed';
-
-        if($payment) {
-            $data = [
-                'token' => $payment->cloudpayments_id,
-                'email' => $payment->accountId,
-                'accountid' => $payment->accountId,
-                'Description' => 'Оформление подписки на сайте https://wingifts.net',
-                'amount' => (float)config('cloud-payments.subscription_amount_rub'),
-                // 'amount' => 1,
-                'currency' => 'RUB',
-            ];
-
-
-
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-              CURLOPT_URL => 'https://api.cloudpayments.ru/payments/tokens/charge',
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_ENCODING => '',
-              CURLOPT_MAXREDIRS => 10,
-              CURLOPT_TIMEOUT => 0,
-              CURLOPT_FOLLOWLOCATION => true,
-              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-              CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => json_encode($data),
-              CURLOPT_HTTPHEADER => array(
-                'Authorization: Basic cGtfMzFkZDAxM2JkNDRhM2ZkZWM4ODM0MzJkOTNiMTI6NTJhNzlkMWI5YTVlZTNlMTVkNjFhNTE5ZDE0OWFhNzY=',
-                'Content-Type: application/json'
-              ),
-            ));
-
-         
-
-            $result = curl_exec($curl);
-            curl_close($curl);
-
-
-            $result = json_decode($result,true);
-         
-
-            if (isset($result['Model']['Status']) && $result['Model']['Status'] == 'Completed') {
-                $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(30);
-                $payment->status = 'Active';
-                $payment->save();
-
-                 $user = User::where('email',$payment->accountId)->first();
-                // $user = User::find(4945);
-                $traffic = Traffic::where('us_id',$user->id)->first();
-                if($traffic) {
-                    // $curl = curl_init();
-
-                    // curl_setopt_array($curl, array(
-                    //     CURLOPT_URL => 'https://your-free-prize.xyz/callback.php?clickid=' . $traffic->clickid . '&action=rebil',
-                    //     CURLOPT_RETURNTRANSFER => true,
-                    //     CURLOPT_ENCODING => '',
-                    //     CURLOPT_MAXREDIRS => 10,
-                    //     CURLOPT_TIMEOUT => 0,
-                    //     CURLOPT_FOLLOWLOCATION => true,
-                    //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    //     CURLOPT_CUSTOMREQUEST => 'GET',
-                    // ));
-
-                    // $response = curl_exec($curl);
-
-                    //  Log::info('traffic rebil: ' . print_r([$traffic,$response], true));
-                    // curl_close($curl);
-                     // return 1;
-
-                }
-
-            Log::info('cloudPayments success payment: ' . print_r($payment, true));
-
-                
-            } else {
-                $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(6);
-                $payment->status = 'Failed';
-                $payment->save();
+                $cur_user = User::where('email',$payment->accountId)->first();
+
+                $cur_user->history()->create([
+                    'user_id' => $cur_user->id,
+                    'action' => 'unrenewed'
+                ]);
 
                 Log::info('cloudPayments failed payment: ' . print_r($payment, true));
 

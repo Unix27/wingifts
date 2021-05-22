@@ -199,7 +199,8 @@ class SubscriptionCrudController extends CrudController
          CRUD::column('status')->label('Статус');
          CRUD::column('accountId')->label('E-mail');
          CRUD::column('start_at')->label('Регистрация');
-         CRUD::column('nextTransactionDate')->label('След.оплата');
+         CRUD::column('nextTransactionDate')->label('След. оплата');
+
     }
 
     /**
@@ -228,9 +229,19 @@ class SubscriptionCrudController extends CrudController
          CRUD::field('status')->type('text')->label('Статус');
          CRUD::field('accountId')->type('text')->label('E-mail');
          CRUD::field('start_at')->type('date')->label('Регистрация');
-         CRUD::field('nextTransactionDate')->type('date')->label('След.оплата');
+         CRUD::field('nextTransactionDate')->type('date')->label('Следующая оплата');
 
+         CRUD::addField([// CustomHTML
+            'name'  => 'Table',
+            'type'  => 'view',
+            'view' => '/components/history-table']);
 
+         // $user_new = \App\Models\User::find(50)->first();
+         // $user_new->history()->create([
+         //    'user_id' => $user_new->id,
+         //    'action' => 'unsubscribed',
+         //    ]);
+         // dump($user_new->history);
     }
 
     /**

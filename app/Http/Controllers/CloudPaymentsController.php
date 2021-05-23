@@ -70,6 +70,10 @@ class CloudPaymentsController extends Controller
                 'start_at' => \Carbon\Carbon::now(),
                 'nextTransactionDate' => \Carbon\Carbon::now()->addSeconds(config('cloud-payments.start_date_add_seconds'))
             ]);
+            $user->history()->create([
+                'user_id' => $user->id,
+                'action' => 'subscribed'
+            ]);
 
         }
 
@@ -246,6 +250,10 @@ class CloudPaymentsController extends Controller
                 'status' => 'Active'
             ]);
             $user->assignRole('subscriber');
+            $user->history()->create([
+                'user_id' => $user->id,
+                'action' => 'renewed'
+            ]);
             return;
         }
 
@@ -278,11 +286,25 @@ class CloudPaymentsController extends Controller
                 $subs->status = 'Active';
                 $subs->update();
 
+                $cur_user = \App\Models\User::find($subs->user_id);
+
+                $cur_user->history()->create([
+                    'user_id' => $cur_user->id,
+                    'action' => 'renewed'
+                ]);
+
                 return true;
             } else {
                 $subs->nextTransactionDate = \Carbon\Carbon::now()->addSeconds(((int)config('cloud-payments.subscription_retry_days')) * 60 * 60 * 24);
                 $subs->status = 'Failed';
                 $subs->update();
+
+                $cur_user = \App\Models\User::find($subs->user_id);
+
+                $cur_user->history()->create([
+                    'user_id' => $cur_user->id,
+                    'action' => 'unrenewed'
+                ]);
 
                 return false;
             }
@@ -353,7 +375,12 @@ class CloudPaymentsController extends Controller
                 $payment->status = 'Active';
                 $payment->save();
 
-                 $user = User::where('email',$payment->accountId)->first();
+                $user = User::where('email',$payment->accountId)->first();
+
+                $user->history()->create([
+                    'user_id' => $user->id,
+                    'action' => 'unrenewed'
+                ]);
                 // $user = User::find(4945);
                 $traffic = Traffic::where('us_id',$user->id)->first();
                 if($traffic) {
@@ -385,6 +412,13 @@ class CloudPaymentsController extends Controller
                 $payment->nextTransactionDate = \Carbon\Carbon::now()->addDays(6);
                 $payment->status = 'Failed';
                 $payment->save();
+
+                $cur_user = User::where('email',$payment->accountId)->first();
+
+                $cur_user->history()->create([
+                    'user_id' => $cur_user->id,
+                    'action' => 'unrenewed'
+                ]);
 
                 Log::info('cloudPayments failed payment: ' . print_r($payment, true));
 

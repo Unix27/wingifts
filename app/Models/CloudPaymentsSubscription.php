@@ -104,7 +104,22 @@ class CloudPaymentsSubscription extends Model
 
     public static function getExpiredSubsriptions()
     {
-        return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->whereIn('status', ['Active', 'Failed'])->first();
+        return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->whereIn('status', ['Active', 'Failed', 'Subscribed'])->first();
+    }
+
+    public static function getExpiredSubsriptionsFailed()
+    {
+    	return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->where('status', '=','Failed')->first();	
+    }
+
+    public static function getExpiredSubsriptionsActive()
+    {
+    	return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->where('status', '=','Active')->first();	
+    }
+
+    public static function getExpiredSubsriptionsSubscribed()
+    {
+    	return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->where('status', '=','Subscribed')->first();	
     }
 
 

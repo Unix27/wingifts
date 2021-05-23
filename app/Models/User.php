@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Spatie\Permission\Traits\HasRoles;
-
+use UserHistory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -82,5 +82,10 @@ class User extends Authenticatable
     public function getFailedSubscriptionAttribute()
     {
         return $this->cloudSubscriptions()->failedSubscription()->first();
+    }
+
+    public function history()
+    {
+        return $this->hasMany(\App\Models\UserHistory::class, 'user_id');
     }
 }

@@ -25,10 +25,10 @@ class UserHistory extends Model
      */
     
     // History statuses:
-    //  - Subscribed   (Подписался)
-    //  - Unsubscribed (Отписался)
-    //  - Renewed      (Продлил подписку)
-    //  - Unrenewed    (Не продлил подписку)
+    //  - subscribed   (Подписался)
+    //  - unsubscribed (Отписался)
+    //  - renewed      (Продлил подписку)
+    //  - unrenewed    (Не продлил подписку)
     
     protected $table = 'user_history';
 

@@ -37,6 +37,9 @@ class CloudPaymentsSubscription extends Model
 	    return $this->belongsTo(User::class);
     }
 
+	public function getIsNewAttribute(){
+        return $this->user->is_new;
+    }
 
 	/*
 	|--------------------------------------------------------------------------
@@ -69,6 +72,11 @@ class CloudPaymentsSubscription extends Model
 				'status' => 'Cancelled'
 			]);
 
+		$user->history()->create([
+			'user_id' => $user->id,
+			'action' => 'unsubscribed'
+		]);
+
 		return true;
 	}
 
@@ -87,7 +95,7 @@ class CloudPaymentsSubscription extends Model
 	*/
     public function scopeActiveSubscription($query)
     {
-		return $query->where('status', 'Active');
+		return $query->whereIn('status', ['Active', 'Subscribed']);
 	}
 
     public function scopeFailedSubscription($query)
@@ -97,29 +105,14 @@ class CloudPaymentsSubscription extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('status', 'Active')->orWhere(function($q){
+        return $query->whereIn('status', ['Active', 'Subscribed'])->orWhere(function($q){
 	        $q->where('status', 'Cancelled')->where('nextTransactionDate', '>', \Carbon\Carbon::now());
         });
     }
 
     public static function getExpiredSubsriptions()
     {
-        return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->whereIn('status', ['Active', 'Failed', 'Subscribed'])->first();
-    }
-
-    public static function getExpiredSubsriptionsFailed()
-    {
-    	return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->where('status', '=','Failed')->first();	
-    }
-
-    public static function getExpiredSubsriptionsActive()
-    {
-    	return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->where('status', '=','Active')->first();	
-    }
-
-    public static function getExpiredSubsriptionsSubscribed()
-    {
-    	return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->where('status', '=','Subscribed')->first();	
+        return CloudPaymentsSubscription::where('nextTransactionDate', '<', \Carbon\Carbon::now())->whereIn('status', ['Active', 'Failed'])->first();
     }
 
 

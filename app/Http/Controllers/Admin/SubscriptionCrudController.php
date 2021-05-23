@@ -200,6 +200,7 @@ class SubscriptionCrudController extends CrudController
          CRUD::column('accountId')->label('E-mail');
          CRUD::column('start_at')->label('Регистрация');
          CRUD::column('nextTransactionDate')->label('След. оплата');
+         CRUD::column('is_new')->label('Импорт Пользователя');
 
     }
 
